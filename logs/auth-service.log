@@ -1,0 +1,5 @@
+{"level":"info","time":"2024-06-03T13:45:26+05:00","caller":"C:/Users/AshurovI/Desktop/auth.service/cmd/main.go:18","message":"start"}
+{"level":"info","time":"2024-06-03T13:49:20+05:00","caller":"C:/Users/AshurovI/Desktop/auth.service/internal/infrastructure/logger.go:27","message":"start"}
+{"level":"info","time":"2024-06-03T13:49:20+05:00","caller":"C:/Users/AshurovI/Desktop/auth.service/internal/infrastructure/logger.go:32","message":"start"}
+{"level":"info","time":"2024-06-03T13:49:24+05:00","caller":"C:/Users/AshurovI/Desktop/auth.service/internal/infrastructure/logger.go:27","message":"start"}
+{"level":"info","time":"2024-06-03T13:49:24+05:00","caller":"C:/Users/AshurovI/Desktop/auth.service/internal/infrastructure/logger.go:32","message":"start"}
