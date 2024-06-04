@@ -22,6 +22,7 @@ func (a *api) InitRoutes(conf *pkg.Config) {
 	r := a.engine
 	r.GET("/ping", a.pong)
 	r.POST("/login", a.login)
+	r.GET("/refreshToken", a.refreshToken)
 	r.POST("/auth", a.auth)
 	r.Run(fmt.Sprintf("%s:%s", conf.Srv.Host, conf.Srv.Port))
 }
@@ -48,6 +49,7 @@ func (a *api) login(c *gin.Context) {
 
 func (a *api) auth(c *gin.Context) {
 	accessToken := c.Request.Header.Get("Authorization")
+
 	jwtClaims, err := a.srv.Auth(accessToken)
 	if err != nil {
 		a.log.Error(err, "couldn't auth")
@@ -55,4 +57,15 @@ func (a *api) auth(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, jwtClaims)
+}
+
+func (a *api) refreshToken(c *gin.Context) {
+	token := c.Request.Header.Get("Authorization")
+	response, err := a.srv.RefreshToken(token)
+	if err != nil {
+		a.log.Error(err, "couldn't get new tokens")
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	c.JSON(http.StatusOK, response)
 }

@@ -13,11 +13,12 @@ type Log interface {
 }
 
 type Repository interface {
-	CreateUserWithBaseRole(user *pkg.User) error
+	SaveUser(kcId string) error
 	GetUserByKcId(kcId string) (*pkg.User, error)
 }
 
 type Service interface {
 	Login(data *pkg.LoginRequest) (*pkg.LoginResponse, error)
 	Auth(accessToken string) (*jwt.MapClaims, error)
+	RefreshToken(refreshToken string) (*pkg.LoginResponse, error)
 }

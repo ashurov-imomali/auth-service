@@ -38,8 +38,9 @@ type LoginResponse struct {
 }
 
 type User struct {
-	Id   int64  `json:"user_id" gorm:"column:user_id"` // Уникальный идентификатор пользователя в bd
-	KcId string `json:"kc_id" gorm:"column:kc_id"`     // Уникальный идентификатор пользователя в keycloak
+	Id       int64  `json:"user_id" gorm:"column:user_id;primary_key"` // Уникальный идентификатор пользователя в bd
+	KcId     string `json:"kc_id" gorm:"column:kc_id"`                 // Уникальный идентификатор пользователя в keycloak
+	UserName string `json:"user_name" gorm:"column:username"`
 }
 
 func (User) TableName() string {

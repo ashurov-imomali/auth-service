@@ -9,13 +9,14 @@
 
   "server": {
     "host": "localhost",
-    "port": "8080"
+    "port": "8787"
   },
 
   "key_cloak": {
     "host": "localhost",
     "port": "8080",
-    "client_id": "auth_app",
-    "client_secret": ""
+    "client_id": "new-client",
+    "client_secret": "WDLmynlBHO29o5Kgk8GkmOxGvF0rbrhb",
+    "realm": "master"
   }
 }

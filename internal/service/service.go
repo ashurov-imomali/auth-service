@@ -2,10 +2,8 @@ package service
 
 import (
 	"context"
-	"errors"
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/golang-jwt/jwt/v5"
-	"gorm.io/gorm"
 	"main/pkg"
 	"strings"
 )
@@ -21,16 +19,16 @@ func GetService(r Repository, l Log, conf *pkg.Config) Service {
 }
 
 func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
-	jwt, err := s.kcLogin(req)
+	token, err := s.kcLogin(req)
 	if err != nil {
 		return nil, err
 	}
-	if err := s.checkUserInDb(jwt.AccessToken); err != nil {
+	if err := s.checkUserInDb(token.AccessToken); err != nil {
 		return nil, err
 	}
 	return &pkg.LoginResponse{
-		AccessToken:  jwt.AccessToken,
-		RefreshToken: jwt.RefreshToken,
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
 	}, nil
 
 }
@@ -49,11 +47,7 @@ func (s *Srv) checkUserInDb(accessToken string) error {
 	if err != nil {
 		return err
 	}
-	user, err := s.repo.GetUserByKcId(*userInfo.Sub)
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return s.repo.CreateUserWithBaseRole(user)
-	}
-	return err
+	return s.repo.SaveUser(*userInfo.Sub)
 }
 
 func (s *Srv) getKcUserInfo(accessToken string) (*gocloak.UserInfo, error) {
@@ -63,7 +57,7 @@ func (s *Srv) getKcUserInfo(accessToken string) (*gocloak.UserInfo, error) {
 }
 
 func (s *Srv) Auth(accessToken string) (*jwt.MapClaims, error) {
-	result, err := s.verifyToken(accessToken)
+	result, err := s.verifyToken(s.extractBearerToken(accessToken))
 	if err != nil || !*result.Active {
 		return nil, err
 	}
@@ -88,4 +82,29 @@ func (s *Srv) verifyToken(accessToken string) (*gocloak.IntroSpectTokenResult, e
 
 func (s *Srv) extractBearerToken(token string) string {
 	return strings.Replace(token, "Bearer ", "", 1)
+}
+
+func (s *Srv) generateClaims(kcId string) {
+	user, err := s.repo.GetUserByKcId(kcId)
+	if err != nil {
+
+	}
+	mp := make(map[string]interface{})
+	mp[""]
+}
+
+func (s *Srv) RefreshToken(refreshToken string) (*pkg.LoginResponse, error) {
+	token, err := s.refreshToken(s.extractBearerToken(refreshToken))
+	if err != nil {
+		return nil, err
+	}
+	return &pkg.LoginResponse{AccessToken: token.AccessToken, RefreshToken: token.RefreshToken}, nil
+}
+
+func (s *Srv) refreshToken(refreshToken string) (*gocloak.JWT, error) {
+	return s.keycloak.gocloak.RefreshToken(context.Background(),
+		refreshToken,
+		s.keycloak.clientId,
+		s.keycloak.clientSecret,
+		s.keycloak.realm)
 }
