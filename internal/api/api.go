@@ -47,9 +47,12 @@ func (a *api) login(c *gin.Context) {
 }
 
 func (a *api) auth(c *gin.Context) {
-	var req pkg.LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		a.log.Error(err, "couldn't parse 2 struct")
-		c.Status(http.StatusBadRequest)
+	accessToken := c.Request.Header.Get("Authorization")
+	jwtClaims, err := a.srv.Auth(accessToken)
+	if err != nil {
+		a.log.Error(err, "couldn't auth")
+		c.Status(http.StatusUnauthorized)
+		return
 	}
+	c.JSON(http.StatusOK, jwtClaims)
 }

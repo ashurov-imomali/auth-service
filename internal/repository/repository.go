@@ -10,12 +10,8 @@ type Repository struct {
 	db *gorm.DB
 }
 
-func IntRepository(db *gorm.DB) service.Repository {
+func GetRepository(db *gorm.DB) service.Repository {
 	return &Repository{db: db}
-}
-
-func (r *Repository) CreateUser() {
-
 }
 
 func (r *Repository) GetUserByKcId(kcId string) (*pkg.User, error) {
@@ -24,4 +20,24 @@ func (r *Repository) GetUserByKcId(kcId string) (*pkg.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *Repository) CreateUserWithBaseRole(user *pkg.User) error {
+	tx := r.db.Begin()
+	if err := tx.Create(&user).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	u2r := pkg.User2Role{
+		RoleId: 1,
+		UserId: user.Id,
+	}
+
+	if err := tx.Create(&u2r).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }

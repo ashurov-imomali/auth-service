@@ -1,6 +1,9 @@
 package service
 
-import "main/pkg"
+import (
+	"github.com/golang-jwt/jwt/v5"
+	"main/pkg"
+)
 
 type Log interface {
 	Info(string)
@@ -10,11 +13,11 @@ type Log interface {
 }
 
 type Repository interface {
-	CreateUser()
+	CreateUserWithBaseRole(user *pkg.User) error
 	GetUserByKcId(kcId string) (*pkg.User, error)
 }
 
 type Service interface {
-	CreateUse1r()
 	Login(data *pkg.LoginRequest) (*pkg.LoginResponse, error)
+	Auth(accessToken string) (*jwt.MapClaims, error)
 }

@@ -13,7 +13,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("couldn't read configs: %v", err)
 	}
-	logger, err := infrastructure.InitLogger()
+	logger, err := infrastructure.GetLogger()
 	if err != nil {
 		log.Fatalf("couldn't init logger: %v", err)
 	}
@@ -21,7 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("couldn't get Database connect: %v", err)
 	}
-	repo := repository.IntRepository(db)
+	repo := repository.GetRepository(db)
 
 	srv := service.GetService(repo, logger, conf)
 

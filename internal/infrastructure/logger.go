@@ -11,7 +11,7 @@ type Logger struct {
 	Log *zerolog.Logger
 }
 
-func InitLogger() (service.Log, error) {
+func GetLogger() (service.Log, error) {
 	file, err := os.OpenFile("./logs/auth-service.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err

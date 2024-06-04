@@ -1,1 +1,9 @@
-./.idea
+*.log
+/.idea/
+*.exe
+/tmp/*
+/temp/*
+*.json
+/tempreports/*
+falconapi-linux-amd64
+falconapi

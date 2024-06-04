@@ -1,10 +1,5 @@
 package pkg
 
-import (
-	"database/sql"
-	"time"
-)
-
 type Database struct {
 	Host     string `json:"host"`
 	Port     string `json:"port"`
@@ -43,7 +38,7 @@ type LoginResponse struct {
 }
 
 type User struct {
-	Id   int    `json:"user_id" gorm:"column:user_id"` // Уникальный идентификатор пользователя в bd
+	Id   int64  `json:"user_id" gorm:"column:user_id"` // Уникальный идентификатор пользователя в bd
 	KcId string `json:"kc_id" gorm:"column:kc_id"`     // Уникальный идентификатор пользователя в keycloak
 }
 
@@ -51,22 +46,11 @@ func (User) TableName() string {
 	return "tusers"
 }
 
-type TUser struct {
-	UserID             int            `db:"user_id"`              // Уникальный идентификатор пользователя
-	Username           string         `db:"username"`             // Имя пользователя
-	Password           string         `db:"password"`             // Хэш пароля
-	Fullname           sql.NullString `db:"fullname"`             // Полное имя пользователя
-	UserDesc           sql.NullString `db:"user_desc"`            // Описание пользователя
-	Email              string         `db:"email"`                // Электронная почта пользователя
-	CreatedAt          time.Time      `db:"created_at"`           // Дата и время создания записи
-	UpdatedAt          time.Time      `db:"updated_at"`           // Дата и время последнего обновления записи
-	LoginAt            *time.Time     `db:"login_at"`             // Дата и время последнего входа
-	Phone              string         `db:"phone"`                // Номер телефона пользователя
-	Salt               string         `db:"salt"`                 // Соль для хэширования пароля
-	CreatedBy          *int           `db:"created_by"`           // Кто создал запись
-	ModifiedBy         *int           `db:"modified_by"`          // Кто последним изменил запись
-	Disabled           bool           `db:"disabled"`             // Статус блокировки пользователя
-	GAuthSecret        *bool          `db:"gauth_secret"`         // Секрет для двухфакторной аутентификации (Google Authenticator)
-	GAuthVerified      bool           `db:"gauth_verified"`       // Флаг, указывающий, подтверждена ли двухфакторная аутентификация
-	PasswordLastChange *time.Time     `db:"password_last_change"` // Дата и время последнего изменения пароля
+type User2Role struct {
+	RoleId int64 `json:"role_id" gorm:"role_id"`
+	UserId int64 `json:"user_id" gorm:"user_id"`
+}
+
+func (User2Role) TableName() string {
+	return "tuser2role"
 }
