@@ -47,7 +47,12 @@ func (s *Srv) checkUserInDb(accessToken string) error {
 	if err != nil {
 		return err
 	}
-	return s.repo.SaveUser(*userInfo.Sub)
+	_, find, err := s.repo.GetUserByKcId(*userInfo.Sub)
+	if !find {
+		user := &pkg.User{KcId: *userInfo.Sub, UserName: *userInfo.PreferredUsername}
+		return s.repo.CreateUserWithBaseRole(user)
+	}
+	return err
 }
 
 func (s *Srv) getKcUserInfo(accessToken string) (*gocloak.UserInfo, error) {
@@ -84,14 +89,14 @@ func (s *Srv) extractBearerToken(token string) string {
 	return strings.Replace(token, "Bearer ", "", 1)
 }
 
-func (s *Srv) generateClaims(kcId string) {
-	user, err := s.repo.GetUserByKcId(kcId)
-	if err != nil {
-
-	}
-	mp := make(map[string]interface{})
-	mp[""]
-}
+//func (s *Srv) generateClaims(kcId string) {
+//	user, find, err := s.repo.GetUserByKcId(kcId)
+//	if err != nil {
+//
+//	}
+//	mp := make(map[string]interface{})
+//	mp[""]
+//}
 
 func (s *Srv) RefreshToken(refreshToken string) (*pkg.LoginResponse, error) {
 	token, err := s.refreshToken(s.extractBearerToken(refreshToken))

@@ -15,7 +15,7 @@ func GetRepository(db *gorm.DB) service.Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) createUserWithBaseRole(user *pkg.User) error {
+func (r *Repository) CreateUserWithBaseRole(user *pkg.User) error {
 	tx := r.db.Begin()
 	if err := tx.Create(&user).Error; err != nil {
 		tx.Rollback()
@@ -35,21 +35,11 @@ func (r *Repository) createUserWithBaseRole(user *pkg.User) error {
 	return tx.Commit().Error
 }
 
-func (r *Repository) SaveUser(kcId string) error {
+func (r *Repository) GetUserByKcId(kcId string) (*pkg.User, bool, error) {
 	var user pkg.User
 	err := r.db.Where("kc_id = ?", kcId).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		user.KcId = kcId
-		return r.createUserWithBaseRole(&user)
+	if errors.Is(gorm.ErrRecordNotFound, err) {
+		return nil, false, nil
 	}
-	return err
-}
-
-func (r *Repository) GetUserByKcId(kcId string) (*pkg.User, error) {
-	var user pkg.User
-	err := r.db.Where("kc_id = ?", kcId).First(&user).Error
-	if err != nil {
-		return nil, err
-	}
-	return &user, nil
+	return &user, true, err
 }

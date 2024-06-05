@@ -13,8 +13,8 @@ type Log interface {
 }
 
 type Repository interface {
-	SaveUser(kcId string) error
-	GetUserByKcId(kcId string) (*pkg.User, error)
+	GetUserByKcId(kcId string) (*pkg.User, bool, error)
+	CreateUserWithBaseRole(user *pkg.User) error
 }
 
 type Service interface {

@@ -18,5 +18,12 @@
     "client_id": "new-client",
     "client_secret": "WDLmynlBHO29o5Kgk8GkmOxGvF0rbrhb",
     "realm": "master"
+  },
+
+  "redis": {
+    "host": "redis-18096.c85.us-east-1-2.ec2.redns.redis-cloud.com",
+    "port": "18096",
+    "username": "default",
+    "password": "sYnzGFCENC6vpqvjXW9IvCnFhaw0OipW"
   }
 }

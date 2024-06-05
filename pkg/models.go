@@ -21,6 +21,9 @@ type KeyCloak struct {
 	Realm        string `json:"realm"`
 }
 
+type RedisClient struct {
+}
+
 type Config struct {
 	Db       *Database `json:"database"`
 	KeyCloak *KeyCloak `json:"key_cloak"`
