@@ -43,3 +43,12 @@ func (r *Repository) GetUserByKcId(kcId string) (*pkg.User, bool, error) {
 	}
 	return &user, true, err
 }
+
+func (r *Repository) GetPermissionsByUserId(id int64) ([]int64, error) {
+	permissions := make([]int64, 0)
+	err := r.db.Table("trole2permissions p").Select("p.id").
+		Joins("inner join tuser2role t on p.role_id = t.role_id").
+		Where("p.is_active = ? and t.user_id = ?", true, id).
+		Find(&permissions).Error
+	return permissions, err
+}

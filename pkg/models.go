@@ -36,14 +36,16 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken  string  `json:"access_token"`
+	RefreshToken string  `json:"refresh_token"`
+	UserId       int64   `json:"user_id"`
+	Permissions  []int64 `json:"permissions"`
 }
 
 type User struct {
 	Id       int64  `json:"user_id" gorm:"column:user_id;primary_key"` // Уникальный идентификатор пользователя в bd
 	KcId     string `json:"kc_id" gorm:"column:kc_id"`                 // Уникальный идентификатор пользователя в keycloak
-	UserName string `json:"user_name" gorm:"column:username"`
+	Username string `json:"username" gorm:"column:username"`
 }
 
 func (User) TableName() string {

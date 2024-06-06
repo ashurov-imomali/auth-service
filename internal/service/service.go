@@ -23,12 +23,14 @@ func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := s.checkUserInDb(token.AccessToken); err != nil {
+	user, err := s.checkUserInDb(token.AccessToken)
+	if err != nil {
 		return nil, err
 	}
 	return &pkg.LoginResponse{
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
+		UserId:       user.Id,
 	}, nil
 
 }
@@ -42,17 +44,17 @@ func (s *Srv) kcLogin(req *pkg.LoginRequest) (*gocloak.JWT, error) {
 		req.Password)
 }
 
-func (s *Srv) checkUserInDb(accessToken string) error {
+func (s *Srv) checkUserInDb(accessToken string) (*pkg.User, error) {
 	userInfo, err := s.getKcUserInfo(accessToken)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, find, err := s.repo.GetUserByKcId(*userInfo.Sub)
+	user, find, err := s.repo.GetUserByKcId(*userInfo.Sub)
 	if !find {
-		user := &pkg.User{KcId: *userInfo.Sub, UserName: *userInfo.PreferredUsername}
-		return s.repo.CreateUserWithBaseRole(user)
+		user := &pkg.User{KcId: *userInfo.Sub, Username: *userInfo.PreferredUsername}
+		return user, s.repo.CreateUserWithBaseRole(user)
 	}
-	return err
+	return user, err
 }
 
 func (s *Srv) getKcUserInfo(accessToken string) (*gocloak.UserInfo, error) {
@@ -61,14 +63,18 @@ func (s *Srv) getKcUserInfo(accessToken string) (*gocloak.UserInfo, error) {
 		s.keycloak.realm)
 }
 
-func (s *Srv) Auth(accessToken string) (*jwt.MapClaims, error) {
+func (s *Srv) Auth(accessToken string) (*pkg.User, error) {
 	result, err := s.verifyToken(s.extractBearerToken(accessToken))
 	if err != nil || !*result.Active {
 		return nil, err
 	}
 
 	_, claims, err := s.decodeAccessToken(accessToken)
-	return claims, err
+	if err != nil {
+		return nil, err
+	}
+	user, _, err := s.repo.GetUserByKcId((*claims)["sub"].(string))
+	return user, err
 }
 
 func (s *Srv) decodeAccessToken(accessToken string) (*jwt.Token, *jwt.MapClaims, error) {

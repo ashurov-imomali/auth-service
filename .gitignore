@@ -5,5 +5,5 @@
 /temp/*
 *.json
 /tempreports/*
-falconapi-linux-amd64
-falconapi
+auth-linux-amd64
+authD
