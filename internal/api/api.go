@@ -49,7 +49,6 @@ func (a *api) login(c *gin.Context) {
 
 func (a *api) auth(c *gin.Context) {
 	accessToken := c.Request.Header.Get("Authorization")
-
 	user, err := a.srv.Auth(accessToken)
 	if err != nil {
 		a.log.Error(err, "couldn't auth")

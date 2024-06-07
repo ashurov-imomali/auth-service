@@ -6,4 +6,4 @@
 *.json
 /tempreports/*
 auth-linux-amd64
-authD
+auth

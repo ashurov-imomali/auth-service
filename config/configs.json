@@ -13,10 +13,10 @@
   },
 
   "key_cloak": {
-    "host": "localhost",
-    "port": "8080",
+    "host": "http://192.168.150.64",
+    "port": "8181",
     "client_id": "new-client",
-    "client_secret": "WDLmynlBHO29o5Kgk8GkmOxGvF0rbrhb",
+    "client_secret": "8Fh1H07XgC9xL9o4SoDDmLhTzH0AM1bu",
     "realm": "master"
   },
 

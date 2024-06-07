@@ -2,9 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/golang-jwt/jwt/v5"
 	"main/pkg"
+	"os"
 	"strings"
 )
 
@@ -49,9 +52,16 @@ func (s *Srv) checkUserInDb(accessToken string) (*pkg.User, error) {
 	if err != nil {
 		return nil, err
 	}
+	bytes, err := json.MarshalIndent(&userInfo, "", " ")
+	if err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile("datafromAD.json", bytes, 0777); err != nil {
+		return nil, err
+	}
 	user, find, err := s.repo.GetUserByKcId(*userInfo.Sub)
 	if !find {
-		user := &pkg.User{KcId: *userInfo.Sub, Username: *userInfo.PreferredUsername}
+		user := &pkg.User{KcId: *userInfo.Sub, Username: *userInfo.PreferredUsername, Disabled: true}
 		return user, s.repo.CreateUserWithBaseRole(user)
 	}
 	return user, err
@@ -63,18 +73,21 @@ func (s *Srv) getKcUserInfo(accessToken string) (*gocloak.UserInfo, error) {
 		s.keycloak.realm)
 }
 
-func (s *Srv) Auth(accessToken string) (*pkg.User, error) {
+func (s *Srv) Auth(accessToken string) (*pkg.UserInfo, error) {
 	result, err := s.verifyToken(s.extractBearerToken(accessToken))
-	if err != nil || !*result.Active {
+	if err != nil {
 		return nil, err
+	}
+	if !*result.Active {
+		return nil, errors.New("invalid token")
 	}
 
 	_, claims, err := s.decodeAccessToken(accessToken)
 	if err != nil {
 		return nil, err
 	}
-	user, _, err := s.repo.GetUserByKcId((*claims)["sub"].(string))
-	return user, err
+
+	return s.repo.GetUserInfoByKcId((*claims)["sub"].(string))
 }
 
 func (s *Srv) decodeAccessToken(accessToken string) (*jwt.Token, *jwt.MapClaims, error) {

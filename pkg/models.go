@@ -1,5 +1,7 @@
 package pkg
 
+import "time"
+
 type Database struct {
 	Host     string `json:"host"`
 	Port     string `json:"port"`
@@ -31,7 +33,7 @@ type Config struct {
 }
 
 type LoginRequest struct {
-	Login    string `json:"login"`
+	Login    string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -43,13 +45,33 @@ type LoginResponse struct {
 }
 
 type User struct {
-	Id       int64  `json:"user_id" gorm:"column:user_id;primary_key"` // Уникальный идентификатор пользователя в bd
-	KcId     string `json:"kc_id" gorm:"column:kc_id"`                 // Уникальный идентификатор пользователя в keycloak
-	Username string `json:"username" gorm:"column:username"`
+	Id                 int64      `gorm:"column:user_id;primary_key"`
+	KcId               string     `json:"kc_id" gorm:"column:kc_id"` // Уникальный идентификатор пользователя в keycloak
+	Username           string     `gorm:"column:username"`
+	Password           string     `gorm:"column:password"`
+	Email              string     `gorm:"column:email"`
+	Desc               string     `gorm:"column:user_desc"`
+	FullName           string     `gorm:"column:fullname"`
+	Phone              string     `gorm:"column:phone"`
+	Salt               string     `gorm:"column:salt"`
+	Disabled           bool       `gorm:"column:disabled"`
+	CreatedAt          *time.Time `gorm:"column:created_at"`
+	UpdatedAt          *time.Time `gorm:"column:updated_at"`
+	LoginAt            *time.Time `gorm:"column:login_at"`
+	GauthSecret        string     `gorm:"gauth_secret"`
+	GauthVerified      bool       `gorm:"gauth_verified"`
+	PasswordLastChange time.Time  `gorm:"column:password_last_change"`
 }
 
 func (User) TableName() string {
 	return "tusers"
+}
+
+type UserInfo struct {
+	UserId   int64  `json:"user_id" gorm:"column:user_id;primary_key"`
+	KcId     string `json:"kc_id" gorm:"column:kc_id"` // Уникальный идентификатор пользователя в keycloak
+	Username string `json:"username" gorm:"column:username"`
+	Role     string `json:"role" gorm:"column:role"`
 }
 
 type User2Role struct {

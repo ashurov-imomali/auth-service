@@ -15,7 +15,7 @@ type keycloak struct {
 
 func newKeycloak(conf *pkg.Config) *keycloak {
 	return &keycloak{
-		gocloak:      gocloak.NewClient(fmt.Sprintf("http://%s:%s", conf.KeyCloak.Host, conf.KeyCloak.Port)),
+		gocloak:      gocloak.NewClient(fmt.Sprintf("%s:%s", conf.KeyCloak.Host, conf.KeyCloak.Port)),
 		clientId:     conf.KeyCloak.ClientId,
 		clientSecret: conf.KeyCloak.ClientSecret,
 		realm:        conf.KeyCloak.Realm,

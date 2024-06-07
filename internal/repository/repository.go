@@ -23,7 +23,7 @@ func (r *Repository) CreateUserWithBaseRole(user *pkg.User) error {
 	}
 
 	u2r := pkg.User2Role{
-		RoleId: 1,
+		RoleId: 16,
 		UserId: user.Id,
 	}
 
@@ -51,4 +51,11 @@ func (r *Repository) GetPermissionsByUserId(id int64) ([]int64, error) {
 		Where("p.is_active = ? and t.user_id = ?", true, id).
 		Find(&permissions).Error
 	return permissions, err
+}
+
+func (r *Repository) GetUserInfoByKcId(kcId string) (*pkg.UserInfo, error) {
+	var user pkg.UserInfo
+	return &user, r.db.Where("u.kc_id=?", kcId).Select("u.user_id, u.kc_id, u.username, r.role_name as role").
+		Table("tusers u").Joins("join tuser2role ur on ur.user_id = u.user_id").
+		Joins("join troles r on r.role_id = ur.role_id").First(&user).Error
 }
