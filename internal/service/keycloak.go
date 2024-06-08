@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"github.com/Nerzal/gocloak/v13"
 	"main/pkg"
 )
@@ -13,11 +12,11 @@ type keycloak struct {
 	realm        string
 }
 
-func newKeycloak(conf *pkg.Config) *keycloak {
+func newKeycloak(conf *pkg.KeyCloak) *keycloak {
 	return &keycloak{
-		gocloak:      gocloak.NewClient(fmt.Sprintf("%s:%s", conf.KeyCloak.Host, conf.KeyCloak.Port)),
-		clientId:     conf.KeyCloak.ClientId,
-		clientSecret: conf.KeyCloak.ClientSecret,
-		realm:        conf.KeyCloak.Realm,
+		gocloak:      pkg.NewKeyCloak(conf),
+		clientId:     conf.ClientId,
+		clientSecret: conf.ClientSecret,
+		realm:        conf.Realm,
 	}
 }

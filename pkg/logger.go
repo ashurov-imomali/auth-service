@@ -1,17 +1,22 @@
-package infrastructure
+package pkg
 
 import (
 	"github.com/rs/zerolog"
 	"io"
-	"main/internal/service"
 	"os"
 )
 
 type Logger struct {
 	Log *zerolog.Logger
 }
+type Log interface {
+	Info(string)
+	Error(error, string)
+	Warn(string)
+	Debug(string)
+}
 
-func GetLogger() (service.Log, error) {
+func GetLogger() (Log, error) {
 	file, err := os.OpenFile("./logs/auth-service.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err

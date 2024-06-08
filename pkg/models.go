@@ -14,6 +14,12 @@ type Server struct {
 	Host string `json:"host"`
 	Port string `json:"port"`
 }
+type Redis struct {
+	Uri      string `json:"uri"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Db       int    `json:"db"`
+}
 
 type KeyCloak struct {
 	Host         string `json:"host"`
@@ -30,6 +36,8 @@ type Config struct {
 	Db       *Database `json:"database"`
 	KeyCloak *KeyCloak `json:"key_cloak"`
 	Srv      *Server   `json:"server"`
+	Redis    *Redis    `json:"redis"`
+	Sms2FA   bool      `json:"sms_2_fa"`
 }
 
 type LoginRequest struct {
@@ -38,10 +46,11 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccessToken  string  `json:"access_token"`
-	RefreshToken string  `json:"refresh_token"`
-	UserId       int64   `json:"user_id"`
-	Permissions  []int64 `json:"permissions"`
+	RequestID       string `json:"RequestID"`
+	Phone           string `json:"phone"`
+	IsGauthPrefered bool   `json:"isGauthPrefered"`
+	SmsOtpDisable   bool   `json:"sms_otp_disable"`
+	GauthSession    string `json:"gauth_session"`
 }
 
 type User struct {
@@ -81,4 +90,17 @@ type User2Role struct {
 
 func (User2Role) TableName() string {
 	return "tuser2role"
+}
+
+type UserSecure struct {
+	UserID        string
+	OtpID         string
+	Username      string
+	GauthVerified bool
+	Gattribute    string
+}
+
+type Tokens struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }

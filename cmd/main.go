@@ -3,21 +3,21 @@ package main
 import (
 	"log"
 	"main/internal/api"
-	"main/internal/infrastructure"
 	"main/internal/repository"
 	"main/internal/service"
+	"main/pkg"
 )
 
 func main() {
-	conf, err := infrastructure.GetConfigs()
+	conf, err := pkg.GetConfigs()
 	if err != nil {
 		log.Fatalf("couldn't read configs: %v", err)
 	}
-	logger, err := infrastructure.GetLogger()
+	logger, err := pkg.GetLogger()
 	if err != nil {
 		log.Fatalf("couldn't init logger: %v", err)
 	}
-	db, err := infrastructure.GetDbConnection(conf)
+	db, err := pkg.GetDbConnection(conf.Db)
 	if err != nil {
 		log.Fatalf("couldn't get Database connect: %v", err)
 	}

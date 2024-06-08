@@ -11,10 +11,10 @@ import (
 type api struct {
 	engine *gin.Engine
 	srv    service.Service
-	log    service.Log
+	log    pkg.Log
 }
 
-func NewApi(s service.Service, l service.Log) Api {
+func NewApi(s service.Service, l pkg.Log) Api {
 	return &api{engine: gin.Default(), srv: s, log: l}
 }
 

@@ -21,9 +21,9 @@
   },
 
   "redis": {
-    "host": "redis-18096.c85.us-east-1-2.ec2.redns.redis-cloud.com",
-    "port": "18096",
+    "uri": "redis-19940.c16.us-east-1-2.ec2.redns.redis-cloud.com:19940",
     "username": "default",
-    "password": "sYnzGFCENC6vpqvjXW9IvCnFhaw0OipW"
+    "password": "CMpPxY0pHt6MjaSW54vhnVVDyXJrPFqm",
+    "db": 0
   }
 }

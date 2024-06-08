@@ -6,36 +6,82 @@ import (
 	"errors"
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"main/pkg"
-	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Srv struct {
 	repo     Repository
-	log      Log
+	log      pkg.Log
 	keycloak *keycloak
+	rClient  *redis.Client
 }
 
-func GetService(r Repository, l Log, conf *pkg.Config) Service {
-	return &Srv{repo: r, log: l, keycloak: newKeycloak(conf)}
+func GetService(r Repository, l pkg.Log, conf *pkg.Config) Service {
+	return &Srv{repo: r, log: l, keycloak: newKeycloak(conf.KeyCloak), rClient: pkg.NewRedisClient(conf.Redis)}
 }
 
 func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
+	requestId := uuid.New().String()
 	token, err := s.kcLogin(req)
 	if err != nil {
 		return nil, err
 	}
+
+	tData, err := json.Marshal(&pkg.Tokens{AccessToken: token.AccessToken, RefreshToken: token.RefreshToken})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.setRCache("token_"+requestId, tData, 8*time.Minute); err != nil {
+		return nil, err
+	}
+
 	user, err := s.checkUserInDb(token.AccessToken)
 	if err != nil {
 		return nil, err
 	}
+
+	uData, err := json.Marshal(&pkg.UserSecure{UserID: strconv.FormatInt(user.Id, 10), GauthVerified: user.GauthVerified,
+		Gattribute: user.GauthSecret, Username: user.Username})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.setRCache("user_"+requestId, uData, 7*time.Minute); err != nil {
+		return nil, err
+	}
+
+	var gAuthSession string
+	if pkg.Sms2FA {
+		gAuthSession = uuid.New().String()
+		if err := s.setRCache(gAuthSession, uData, 7*time.Minute); err != nil {
+			return nil, err
+		}
+	}
+
 	return &pkg.LoginResponse{
-		AccessToken:  token.AccessToken,
-		RefreshToken: token.RefreshToken,
-		UserId:       user.Id,
+		RequestID:       requestId,
+		Phone:           s.customizePhone(user.Phone),
+		IsGauthPrefered: user.GauthVerified,
+		SmsOtpDisable:   pkg.Sms2FA,
+		GauthSession:    gAuthSession,
 	}, nil
 
+}
+
+func (s *Srv) customizePhone(phone string) string {
+	switch len(phone) {
+	case 12:
+		return phone[:5] + "*****" + phone[10:]
+	case 9:
+		return phone[:2] + "*****" + phone[7:]
+	}
+	return phone
 }
 
 func (s *Srv) kcLogin(req *pkg.LoginRequest) (*gocloak.JWT, error) {
@@ -50,13 +96,6 @@ func (s *Srv) kcLogin(req *pkg.LoginRequest) (*gocloak.JWT, error) {
 func (s *Srv) checkUserInDb(accessToken string) (*pkg.User, error) {
 	userInfo, err := s.getKcUserInfo(accessToken)
 	if err != nil {
-		return nil, err
-	}
-	bytes, err := json.MarshalIndent(&userInfo, "", " ")
-	if err != nil {
-		return nil, err
-	}
-	if err := os.WriteFile("datafromAD.json", bytes, 0777); err != nil {
 		return nil, err
 	}
 	user, find, err := s.repo.GetUserByKcId(*userInfo.Sub)
@@ -117,12 +156,12 @@ func (s *Srv) extractBearerToken(token string) string {
 //	mp[""]
 //}
 
-func (s *Srv) RefreshToken(refreshToken string) (*pkg.LoginResponse, error) {
+func (s *Srv) RefreshToken(refreshToken string) (*pkg.Tokens, error) {
 	token, err := s.refreshToken(s.extractBearerToken(refreshToken))
 	if err != nil {
 		return nil, err
 	}
-	return &pkg.LoginResponse{AccessToken: token.AccessToken, RefreshToken: token.RefreshToken}, nil
+	return &pkg.Tokens{AccessToken: token.AccessToken, RefreshToken: token.RefreshToken}, nil
 }
 
 func (s *Srv) refreshToken(refreshToken string) (*gocloak.JWT, error) {
