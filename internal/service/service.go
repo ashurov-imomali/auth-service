@@ -1,14 +1,18 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
+	"io"
 	"main/pkg"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -19,10 +23,15 @@ type Srv struct {
 	log      pkg.Log
 	keycloak *keycloak
 	rClient  *redis.Client
+	hClient  http.Client
 }
 
 func GetService(r Repository, l pkg.Log, conf *pkg.Config) Service {
-	return &Srv{repo: r, log: l, keycloak: newKeycloak(conf.KeyCloak), rClient: pkg.NewRedisClient(conf.Redis)}
+	return &Srv{repo: r, log: l,
+		keycloak: newKeycloak(conf.KeyCloak),
+		rClient:  pkg.NewRedisClient(conf.Redis),
+		hClient:  newHttpClient(conf.HClient),
+	}
 }
 
 func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
@@ -46,7 +55,7 @@ func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
 		return nil, err
 	}
 
-	uData, err := json.Marshal(&pkg.UserSecure{UserID: strconv.FormatInt(user.Id, 10), GauthVerified: user.GauthVerified,
+	uData, err := json.Marshal(&pkg.UserSecure{UserID: user.Id, GauthVerified: user.GauthVerified,
 		Gattribute: user.GauthSecret, Username: user.Username})
 	if err != nil {
 		return nil, err
@@ -57,7 +66,7 @@ func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
 	}
 
 	var gAuthSession string
-	if pkg.Sms2FA {
+	if pkg.Params.Sms2Fa {
 		gAuthSession = uuid.New().String()
 		if err := s.setRCache(gAuthSession, uData, 7*time.Minute); err != nil {
 			return nil, err
@@ -68,7 +77,7 @@ func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
 		RequestID:       requestId,
 		Phone:           s.customizePhone(user.Phone),
 		IsGauthPrefered: user.GauthVerified,
-		SmsOtpDisable:   pkg.Sms2FA,
+		SmsOtpDisable:   pkg.Params.Sms2Fa,
 		GauthSession:    gAuthSession,
 	}, nil
 
@@ -170,4 +179,142 @@ func (s *Srv) refreshToken(refreshToken string) (*gocloak.JWT, error) {
 		s.keycloak.clientId,
 		s.keycloak.clientSecret,
 		s.keycloak.realm)
+}
+
+func (s *Srv) SendOTP(req *pkg.OtpRequest) (*pkg.OtpRequest, *Error) {
+	var usrSecrets pkg.UserSecure
+	redisNil, err := s.getRCache(req.RequestID, &usrSecrets)
+	if redisNil {
+		return nil, unauthorized(err, "First you have login")
+	}
+	if err != nil {
+		return nil, internalServerError(err, "Redis Error")
+	}
+	user, err := s.repo.GetUserById(usrSecrets.UserID)
+	if err != nil {
+		return nil, internalServerError(err, "Database error")
+	}
+	otpSms := pkg.SmsOTP{
+		ID:      strconv.FormatInt(user.Id, 10) + req.RequestID,
+		Account: strings.ReplaceAll(user.Phone, " ", ""),
+	}
+	otp, hErr := s.sendSmsOtp(&otpSms)
+	if hErr != nil {
+		return nil, hErr
+	}
+	usrSecrets.OtpID = otp.ID
+	data, err := json.Marshal(&usrSecrets)
+	if err != nil {
+		return nil, internalServerError(err, "couldn't unmarshal")
+	}
+	if err := s.setRCache(req.RequestID, data, 8*time.Minute); err != nil {
+		return nil, internalServerError(err, "Redis error")
+	}
+	return req, nil
+}
+
+func (s *Srv) sendSmsOtp(otp *pkg.SmsOTP) (*pkg.SmsOTP, *Error) {
+	otp.Lifetime = pkg.Params.OTPLifetime
+	otp.ConfirmLimit = pkg.Params.OTPConfirmLimit
+
+	var responseOTP pkg.SmsOTP
+	marshal, err := json.Marshal(otp)
+	if err != nil {
+		return nil, internalServerError(err, "Couldn't marshal struct")
+	}
+	requestBody := bytes.NewBuffer(marshal)
+
+	req, _ := http.NewRequest(http.MethodPost, pkg.Params.OTPUrl, requestBody)
+	resp, err := s.hClient.Do(req)
+	if err != nil {
+		return nil, internalServerError(err, "Send otp unavailable")
+
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusCreated {
+		return nil, badRequest(errors.New("otp adapter error"), string(body))
+	}
+
+	err = json.Unmarshal(body, &responseOTP)
+	if err != nil {
+		return nil, internalServerError(err, "couldn't unmarshal response from otp")
+	}
+	return &responseOTP, nil
+}
+
+func (s *Srv) ConfirmOtp(otp *pkg.Confirm) (*pkg.ConfirmResp, *Error) {
+	var usrSecrets pkg.UserSecure
+	redisNil, err := s.getRCache("user_"+otp.RequestID, &usrSecrets)
+	if redisNil {
+		return nil, unauthorized(err, "first u have login")
+	}
+	if err != nil {
+		return nil, internalServerError(err, "redis error")
+	}
+
+	switch otp.Type {
+	case "sms":
+		otpSms := pkg.SmsOTP{
+			ID:    usrSecrets.OtpID,
+			Value: otp.Value,
+		}
+		if hErr := s.confirmSmsOtp(&otpSms); hErr != nil {
+			return nil, hErr
+		}
+	case "gauth":
+		if !usrSecrets.GauthVerified {
+			return nil, unauthorized(errors.New("wrong type"), "wrong otp type")
+		}
+		if validate := totp.Validate(otp.Value, usrSecrets.Gattribute); !validate {
+			return nil, unauthorized(errors.New("invalid google totp"), "invalid totp")
+
+		}
+	default:
+		return nil, unauthorized(errors.New("unknown OTP type"), "Unknown OTP type")
+	}
+	permissions, err := s.repo.GetPermissionsByUserId(usrSecrets.UserID)
+	if err != nil {
+		return nil, internalServerError(err, "Database error")
+	}
+	var token pkg.Tokens
+	redisNil, err = s.getRCache("token_"+otp.RequestID, &token)
+	if redisNil {
+		return nil, unauthorized(err, "first u have login")
+	}
+	if err != nil {
+		return nil, internalServerError(err, "redis error")
+	}
+	return &pkg.ConfirmResp{
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+		UserId:       usrSecrets.Username,
+		Permissions:  permissions,
+	}, nil
+}
+
+func (s *Srv) confirmSmsOtp(otpSms *pkg.SmsOTP) *Error {
+	marshal, err := json.Marshal(otpSms)
+	if err != nil {
+		return badRequest(err, "couldn't parse 2 struct")
+	}
+	requestBody := bytes.NewBuffer(marshal)
+
+	req, _ := http.NewRequest(http.MethodPatch, pkg.Params.OTPUrl+"/"+otpSms.ID, requestBody)
+
+	resp, err := s.hClient.Do(req)
+	if err != nil {
+		return internalServerError(err, "couldn't send to otp")
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return internalServerError(err, "otp service error")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return unauthorized(errors.New("otp adapter error"), string(body)+resp.Status)
+	}
+
+	return nil
 }

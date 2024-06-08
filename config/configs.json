@@ -25,5 +25,6 @@
     "username": "default",
     "password": "CMpPxY0pHt6MjaSW54vhnVVDyXJrPFqm",
     "db": 0
-  }
+  },
+  "sms_2_fa": false
 }

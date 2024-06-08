@@ -59,3 +59,8 @@ func (r *Repository) GetUserInfoByKcId(kcId string) (*pkg.UserInfo, error) {
 		Table("tusers u").Joins("join tuser2role ur on ur.user_id = u.user_id").
 		Joins("join troles r on r.role_id = ur.role_id").First(&user).Error
 }
+
+func (r *Repository) GetUserById(id int64) (*pkg.User, error) {
+	var user pkg.User
+	return &user, r.db.Where("user_id=?", id).First(&user).Error
+}

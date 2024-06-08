@@ -22,7 +22,9 @@ func (a *api) InitRoutes(conf *pkg.Config) {
 	r := a.engine
 	r.GET("/ping", a.pong)
 	r.POST("/login", a.login)
-	r.GET("/refreshToken", a.refreshToken)
+	r.POST("/send-otp", a.sendOtp)
+	r.POST("/confirm-otp", a.confirmOtp)
+	r.GET("/refresh-token", a.refreshToken)
 	r.POST("/auth", a.auth)
 	r.Run(fmt.Sprintf("%s:%s", conf.Srv.Host, conf.Srv.Port))
 }
@@ -67,4 +69,34 @@ func (a *api) refreshToken(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, response)
+}
+
+func (a *api) sendOtp(c *gin.Context) {
+	var req pkg.OtpRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error while binding": err.Error()})
+		return
+	}
+	resp, hErr := a.srv.SendOTP(&req)
+	if hErr != nil {
+		a.log.Error(hErr.Err, hErr.Message)
+		c.JSON(hErr.Status, gin.H{"message": hErr.Message})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+func (a *api) confirmOtp(c *gin.Context) {
+	var otp pkg.Confirm
+	if err := c.BindJSON(&otp); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "couldn't parse 2 struct"})
+		return
+	}
+	resp, hErr := a.srv.ConfirmOtp(&otp)
+	if hErr != nil {
+		a.log.Error(hErr.Err, hErr.Message)
+		c.JSON(hErr.Status, gin.H{"message": hErr.Message})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }

@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-var Sms2FA bool
+var Params = &TFAParams{}
 
 func GetConfigs() (*Config, error) {
 	var conf Config
@@ -16,6 +16,6 @@ func GetConfigs() (*Config, error) {
 	if err := json.Unmarshal(bytes, &conf); err != nil {
 		return nil, err
 	}
-	Sms2FA = conf.Sms2FA
+	Params = conf.TFAParams
 	return &conf, nil
 }
