@@ -26,5 +26,15 @@
     "password": "CMpPxY0pHt6MjaSW54vhnVVDyXJrPFqm",
     "db": 0
   },
-  "sms_2_fa": false
+
+  "2fa_params": {
+  "Sms2Fa": true,
+  "OTPUrl": "https://example.com/otp",
+  "OTPLifetime": 300,
+  "OTPConfirmLimit": 5
+  },
+
+  "h_client": {
+    "timeout": 20
+  }
 }

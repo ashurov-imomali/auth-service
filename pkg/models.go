@@ -65,6 +65,7 @@ type LoginResponse struct {
 	IsGauthPrefered bool   `json:"isGauthPrefered"`
 	SmsOtpDisable   bool   `json:"sms_otp_disable"`
 	GauthSession    string `json:"gauth_session"`
+	FirstLogin      bool   `json:"first_login"`
 }
 
 type User struct {

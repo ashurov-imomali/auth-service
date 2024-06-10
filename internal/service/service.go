@@ -57,7 +57,7 @@ func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
 		return nil, err
 	}
 
-	user, err := s.checkUserInDb(token.AccessToken)
+	user, firstLogin, err := s.checkUserInDb(token.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +86,7 @@ func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
 		IsGauthPrefered: user.GauthVerified,
 		SmsOtpDisable:   pkg.Params.Sms2Fa,
 		GauthSession:    gAuthSession,
+		FirstLogin:      firstLogin,
 	}, nil
 
 }
@@ -109,17 +110,17 @@ func (s *Srv) kcLogin(req *pkg.LoginRequest) (*gocloak.JWT, error) {
 		req.Password)
 }
 
-func (s *Srv) checkUserInDb(accessToken string) (*pkg.User, error) {
+func (s *Srv) checkUserInDb(accessToken string) (*pkg.User, bool, error) {
 	userInfo, err := s.getKcUserInfo(accessToken)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	user, find, err := s.repo.GetUserByKcId(*userInfo.Sub)
 	if !find {
 		user := &pkg.User{KcId: *userInfo.Sub, Username: *userInfo.PreferredUsername, Disabled: true}
-		return user, s.repo.CreateUserWithBaseRole(user)
+		return user, true, s.repo.CreateUserWithBaseRole(user)
 	}
-	return user, err
+	return user, false, err
 }
 
 func (s *Srv) getKcUserInfo(accessToken string) (*gocloak.UserInfo, error) {
