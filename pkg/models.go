@@ -44,7 +44,7 @@ type Config struct {
 }
 
 type HttpClientParams struct {
-	Timeout time.Duration `json:"timeout"`
+	Timeout int `json:"timeout"`
 }
 
 type TFAParams struct {
@@ -121,7 +121,6 @@ type Tokens struct {
 
 type OtpRequest struct {
 	RequestID string `json:"requestID"`
-	Phone     string `json:"phone"`
 }
 type SmsOTP struct {
 	ID           string `json:"id"`

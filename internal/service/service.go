@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -57,7 +58,7 @@ func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
 		return nil, err
 	}
 
-	user, firstLogin, err := s.checkUserInDb(token.AccessToken)
+	user, err := s.checkUserInDb(token.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -79,6 +80,10 @@ func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
 			return nil, err
 		}
 	}
+	permissions, err := s.repo.GetPermissionsByUserId(user.Id)
+	if err != nil {
+		return nil, err
+	}
 
 	return &pkg.LoginResponse{
 		RequestID:       requestId,
@@ -86,7 +91,7 @@ func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
 		IsGauthPrefered: user.GauthVerified,
 		SmsOtpDisable:   pkg.Params.Sms2Fa,
 		GauthSession:    gAuthSession,
-		FirstLogin:      firstLogin,
+		FirstLogin:      len(permissions) == 0,
 	}, nil
 
 }
@@ -110,17 +115,17 @@ func (s *Srv) kcLogin(req *pkg.LoginRequest) (*gocloak.JWT, error) {
 		req.Password)
 }
 
-func (s *Srv) checkUserInDb(accessToken string) (*pkg.User, bool, error) {
+func (s *Srv) checkUserInDb(accessToken string) (*pkg.User, error) {
 	userInfo, err := s.getKcUserInfo(accessToken)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	user, find, err := s.repo.GetUserByKcId(*userInfo.Sub)
 	if !find {
 		user := &pkg.User{KcId: *userInfo.Sub, Username: *userInfo.PreferredUsername, Disabled: true}
-		return user, true, s.repo.CreateUserWithBaseRole(user)
+		return user, s.repo.CreateUserWithBaseRole(user)
 	}
-	return user, false, err
+	return user, err
 }
 
 func (s *Srv) getKcUserInfo(accessToken string) (*gocloak.UserInfo, error) {
@@ -191,7 +196,7 @@ func (s *Srv) refreshToken(refreshToken string) (*gocloak.JWT, error) {
 
 func (s *Srv) SendOTP(req *pkg.OtpRequest) (*pkg.OtpRequest, *Error) {
 	var usrSecrets pkg.UserSecure
-	redisNil, err := s.getRCache(req.RequestID, &usrSecrets)
+	redisNil, err := s.getRCache("user_"+req.RequestID, &usrSecrets)
 	if redisNil {
 		return nil, unauthorized(err, "First you have login")
 	}
@@ -215,7 +220,7 @@ func (s *Srv) SendOTP(req *pkg.OtpRequest) (*pkg.OtpRequest, *Error) {
 	if err != nil {
 		return nil, internalServerError(err, "couldn't unmarshal")
 	}
-	if err := s.setRCache(req.RequestID, data, 8*time.Minute); err != nil {
+	if err := s.setRCache("user_"+req.RequestID, data, 8*time.Minute); err != nil {
 		return nil, internalServerError(err, "Redis error")
 	}
 	return req, nil
@@ -231,8 +236,11 @@ func (s *Srv) sendSmsOtp(otp *pkg.SmsOTP) (*pkg.SmsOTP, *Error) {
 		return nil, internalServerError(err, "Couldn't marshal struct")
 	}
 	requestBody := bytes.NewBuffer(marshal)
-
-	req, _ := http.NewRequest(http.MethodPost, pkg.Params.OTPUrl, requestBody)
+	req, err := http.NewRequest(http.MethodPost, pkg.Params.OTPUrl, requestBody)
+	if err != nil {
+		return nil, internalServerError(err, "couldn't parse 2 struct")
+	}
+	s.log.Info(fmt.Sprintf("request:%v", req))
 	resp, err := s.hClient.Do(req)
 	if err != nil {
 		return nil, internalServerError(err, "Send otp unavailable")
@@ -310,7 +318,7 @@ func (s *Srv) confirmSmsOtp(otpSms *pkg.SmsOTP) *Error {
 	requestBody := bytes.NewBuffer(marshal)
 
 	req, _ := http.NewRequest(http.MethodPatch, pkg.Params.OTPUrl+"/"+otpSms.ID, requestBody)
-
+	s.log.Info(fmt.Sprintf("request:%v", req))
 	resp, err := s.hClient.Do(req)
 	if err != nil {
 		return internalServerError(err, "couldn't send to otp")

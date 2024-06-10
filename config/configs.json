@@ -2,9 +2,9 @@
   "database":{
     "host": "localhost",
     "port": "5432",
-    "dbname": "postgres",
-    "user": "postgres",
-    "password": "postgres"
+    "dbname": "hpdb",
+    "user": "pgadmin",
+    "password": "Pg@dmin2023"
   },
 
   "server": {
@@ -21,19 +21,18 @@
   },
 
   "redis": {
-    "uri": "redis-19940.c16.us-east-1-2.ec2.redns.redis-cloud.com:19940",
-    "username": "default",
-    "password": "CMpPxY0pHt6MjaSW54vhnVVDyXJrPFqm",
+    "uri": "localhost:6379",
+    "username": "",
+    "password": "",
     "db": 0
   },
 
   "2fa_params": {
   "Sms2Fa": true,
-  "OTPUrl": "https://example.com/otp",
-  "OTPLifetime": 300,
-  "OTPConfirmLimit": 5
+  "OTPUrl": "http://192.168.150.64:8339/otp",
+  "OTPLifetime": 120,
+  "OTPConfirmLimit": 3
   },
-
   "h_client": {
     "timeout": 20
   }
