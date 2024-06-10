@@ -1,12 +1,12 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"main/internal/service"
 	"main/pkg"
 	"net/http"
-	"strconv"
 )
 
 type api struct {
@@ -25,9 +25,11 @@ func (a *api) InitRoutes(conf *pkg.Config) {
 	r.POST("/login", a.login)
 	r.POST("/send-otp", a.sendOtp)
 	r.POST("/confirm-otp", a.confirmOtp)
-	r.GET("/setup-gauth", a.setupGauth)
-	r.POST("/verify-gauth", a.verifyGauth)
 	r.GET("/refresh-token", a.refreshToken)
+	gr := r.Group("/gauth")
+	gr.Use(a.checkToken())
+	gr.GET("/setup", a.setupGauth)
+	gr.POST("/verify", a.verifyGauth)
 	r.POST("/auth", a.auth)
 	r.Run(fmt.Sprintf("%s:%s", conf.Srv.Host, conf.Srv.Port))
 }
@@ -105,19 +107,12 @@ func (a *api) confirmOtp(c *gin.Context) {
 }
 
 func (a *api) setupGauth(c *gin.Context) {
-	strId := c.Query("user_id")
-	username := c.Query("username")
-	if username == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "missing username"})
-		return
-	}
-	id, err := strconv.ParseInt(strId, 10, 64)
+	userInfo, err := a.getUserInfoFromContext(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "couldn't parse userid 2 int64"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-
-	url, hErr := a.srv.SetupGauth(id, username)
+	url, hErr := a.srv.SetupGauth(userInfo.UserId, userInfo.Username)
 	if hErr != nil {
 		a.log.Error(hErr.Err, hErr.Message)
 		c.JSON(hErr.Status, gin.H{"message": hErr.Message})
@@ -132,16 +127,54 @@ func (a *api) verifyGauth(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "couldn't parse 2 struct"})
 		return
 	}
-	strId := c.Query("user_id")
-	id, err := strconv.ParseInt(strId, 10, 64)
+	userinfo, err := a.getUserInfoFromContext(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "wrong user id"})
+		a.log.Error(err, err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-	if hErr := a.srv.VerifyGauth(req.Value, id); hErr != nil {
+	if hErr := a.srv.VerifyGauth(req.Value, userinfo.UserId); hErr != nil {
 		a.log.Error(hErr.Err, hErr.Message)
 		c.JSON(hErr.Status, gin.H{"message": hErr.Message})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "success"})
+}
+
+func (a *api) checkToken() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.Request.Header.Get("Authorization")
+		userInfo, err := a.srv.Auth(token)
+		if err != nil {
+			a.log.Error(err, "invalid token")
+			c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
+			return
+		}
+		c.Set("user_id", userInfo.UserId)
+		c.Set("username", userInfo.Username)
+		c.Next()
+	}
+}
+
+func (a *api) getUserInfoFromContext(c *gin.Context) (*pkg.UserInfo, error) {
+	userId, find := c.Get("user_id")
+	if !find {
+		return nil, errors.New("missing user_id")
+	}
+	username, find := c.Get("username")
+	if !find {
+		return nil, errors.New("missing username")
+	}
+	id, ok := userId.(int64)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("couldn't parse 2 int64:%v", userId))
+	}
+	name, ok := username.(string)
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("couldn't parse 2 string:%v", userId))
+	}
+	return &pkg.UserInfo{
+		UserId:   id,
+		Username: name,
+	}, nil
 }
