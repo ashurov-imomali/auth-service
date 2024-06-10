@@ -26,11 +26,11 @@ func (a *api) InitRoutes(conf *pkg.Config) {
 	r.POST("/send-otp", a.sendOtp)
 	r.POST("/confirm-otp", a.confirmOtp)
 	r.GET("/refresh-token", a.refreshToken)
+	r.POST("/auth", a.auth)
 	gr := r.Group("/gauth")
 	gr.Use(a.checkToken())
 	gr.GET("/setup", a.setupGauth)
 	gr.POST("/verify", a.verifyGauth)
-	r.POST("/auth", a.auth)
 	r.Run(fmt.Sprintf("%s:%s", conf.Srv.Host, conf.Srv.Port))
 }
 
