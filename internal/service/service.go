@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	service    = "HUMO"
+	service    = "Humo ASO"
 	secretSize = 15
 	period     = 30
 )

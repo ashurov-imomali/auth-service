@@ -60,7 +60,7 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	RequestID       string `json:"RequestID"`
+	RequestID       string `json:"requestID"`
 	Phone           string `json:"phone"`
 	IsGauthPrefered bool   `json:"isGauthPrefered"`
 	SmsOtpDisable   bool   `json:"sms_otp_disable"`
