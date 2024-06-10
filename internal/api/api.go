@@ -6,6 +6,7 @@ import (
 	"main/internal/service"
 	"main/pkg"
 	"net/http"
+	"strconv"
 )
 
 type api struct {
@@ -24,6 +25,8 @@ func (a *api) InitRoutes(conf *pkg.Config) {
 	r.POST("/login", a.login)
 	r.POST("/send-otp", a.sendOtp)
 	r.POST("/confirm-otp", a.confirmOtp)
+	r.GET("/setup-gauth", a.setupGauth)
+	r.POST("/verify-gauth", a.verifyGauth)
 	r.GET("/refresh-token", a.refreshToken)
 	r.POST("/auth", a.auth)
 	r.Run(fmt.Sprintf("%s:%s", conf.Srv.Host, conf.Srv.Port))
@@ -99,4 +102,46 @@ func (a *api) confirmOtp(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+func (a *api) setupGauth(c *gin.Context) {
+	strId := c.Query("user_id")
+	username := c.Query("username")
+	if username == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "missing username"})
+		return
+	}
+	id, err := strconv.ParseInt(strId, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "couldn't parse userid 2 int64"})
+		return
+	}
+
+	url, hErr := a.srv.SetupGauth(id, username)
+	if hErr != nil {
+		a.log.Error(hErr.Err, hErr.Message)
+		c.JSON(hErr.Status, gin.H{"message": hErr.Message})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"url": url})
+}
+
+func (a *api) verifyGauth(c *gin.Context) {
+	var req pkg.Confirm
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "couldn't parse 2 struct"})
+		return
+	}
+	strId := c.Query("user_id")
+	id, err := strconv.ParseInt(strId, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "wrong user id"})
+		return
+	}
+	if hErr := a.srv.VerifyGauth(req.Value, id); hErr != nil {
+		a.log.Error(hErr.Err, hErr.Message)
+		c.JSON(hErr.Status, gin.H{"message": hErr.Message})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "success"})
 }

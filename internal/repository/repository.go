@@ -64,3 +64,14 @@ func (r *Repository) GetUserById(id int64) (*pkg.User, error) {
 	var user pkg.User
 	return &user, r.db.Where("user_id=?", id).First(&user).Error
 }
+
+func (r *Repository) UpdateUser(user *pkg.User) (*pkg.User, error) {
+	return user, r.db.Updates(&user).Error
+}
+
+func (r *Repository) UpdateUserGauth(id int64, secret string) error {
+	return r.db.Model(&pkg.User{}).Where("user_id = ?", id).UpdateColumns(map[string]interface{}{
+		"gauth_secret":   secret,
+		"gauth_verified": false,
+	}).Error
+}

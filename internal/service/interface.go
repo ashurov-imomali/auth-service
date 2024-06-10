@@ -10,6 +10,8 @@ type Repository interface {
 	GetPermissionsByUserId(id int64) ([]int64, error)
 	GetUserInfoByKcId(kcId string) (*pkg.UserInfo, error)
 	GetUserById(id int64) (*pkg.User, error)
+	UpdateUser(user *pkg.User) (*pkg.User, error)
+	UpdateUserGauth(id int64, secret string) error
 }
 
 type Service interface {
@@ -17,5 +19,7 @@ type Service interface {
 	Auth(accessToken string) (*pkg.UserInfo, error)
 	RefreshToken(refreshToken string) (*pkg.Tokens, error)
 	SendOTP(request *pkg.OtpRequest) (*pkg.OtpRequest, *Error)
+	SetupGauth(userId int64, username string) (string, *Error)
 	ConfirmOtp(otp *pkg.Confirm) (*pkg.ConfirmResp, *Error)
+	VerifyGauth(otp string, userId int64) *Error
 }

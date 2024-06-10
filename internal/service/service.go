@@ -8,6 +8,7 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"io"
@@ -16,6 +17,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	service    = "HUMO"
+	secretSize = 15
+	period     = 30
 )
 
 type Srv struct {
@@ -316,5 +323,40 @@ func (s *Srv) confirmSmsOtp(otpSms *pkg.SmsOTP) *Error {
 		return unauthorized(errors.New("otp adapter error"), string(body)+resp.Status)
 	}
 
+	return nil
+}
+
+func (s *Srv) SetupGauth(userId int64, username string) (string, *Error) {
+	key, err := s.generateGauth(username)
+	if err != nil {
+		return "", internalServerError(err, "Couldn't generate gauth secret")
+	}
+	if err := s.repo.UpdateUserGauth(userId, key.Secret()); err != nil {
+		return "", internalServerError(err, "Database error[UpdateUSER]")
+	}
+	return key.URL(), nil
+}
+
+func (s *Srv) generateGauth(username string) (*otp.Key, error) {
+	return totp.Generate(totp.GenerateOpts{
+		Period:      period,
+		Issuer:      service,
+		AccountName: username,
+		SecretSize:  secretSize,
+	})
+}
+
+func (s *Srv) VerifyGauth(otp string, userId int64) *Error {
+	user, err := s.repo.GetUserById(userId)
+	if err != nil {
+		return internalServerError(err, "Database error[GetUSER]")
+	}
+	if ok := totp.Validate(otp, user.GauthSecret); !ok {
+		return unauthorized(errors.New("invalid otp"), "invalid otp")
+	}
+	user.GauthVerified = true
+	if _, err := s.repo.UpdateUser(user); err != nil {
+		return internalServerError(err, "Database error[UpdateUSER]")
+	}
 	return nil
 }
