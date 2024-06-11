@@ -5,42 +5,42 @@ import (
 )
 
 type Database struct {
-	Host     string `json:"host"`
-	Port     string `json:"port"`
-	Dbname   string `json:"dbname"`
-	User     string `json:"user"`
-	Password string `json:"password"`
+	Host     string `json:"host" yaml:"host"`
+	Port     string `json:"port" yaml:"port"`
+	Dbname   string `json:"dbname" yaml:"dbname"`
+	User     string `json:"user" yaml:"user"`
+	Password string `json:"password" yaml:"password"`
 }
 
 type Server struct {
-	Host string `json:"host"`
-	Port string `json:"port"`
+	Host string `json:"host" yaml:"host"`
+	Port string `json:"port" yaml:"port"`
 }
 type Redis struct {
-	Uri      string `json:"uri"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Db       int    `json:"db"`
+	Uri      string `json:"uri" yaml:"uri"`
+	Username string `json:"username" yaml:"username"`
+	Password string `json:"password" yaml:"password"`
+	Db       int    `json:"db" yaml:"db"`
 }
 
 type KeyCloak struct {
-	Host         string `json:"host"`
-	Port         string `json:"port"`
-	ClientId     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	Realm        string `json:"realm"`
+	Host         string `json:"host" yaml:"host"`
+	Port         string `json:"port" yaml:"port"`
+	ClientId     string `json:"client_id" yaml:"client_id"`
+	ClientSecret string `json:"client_secret" yaml:"client_secret"`
+	Realm        string `json:"realm" yaml:"realm"`
 }
 
 type RedisClient struct {
 }
 
 type Config struct {
-	Db        *Database         `json:"database"`
-	KeyCloak  *KeyCloak         `json:"key_cloak"`
-	Srv       *Server           `json:"server"`
-	Redis     *Redis            `json:"redis"`
-	TFAParams *TFAParams        `json:"2fa_params"`
-	HClient   *HttpClientParams `json:"h_client"`
+	Db        *Database         `json:"database" yaml:"database"`
+	KeyCloak  *KeyCloak         `json:"key_cloak" yaml:"key_cloak"`
+	Srv       *Server           `json:"server" yaml:"server"`
+	Redis     *Redis            `json:"redis" yaml:"redis"`
+	TFAParams *TFAParams        `json:"2fa_params" yaml:"2fa_params"`
+	HClient   *HttpClientParams `json:"h_client" yaml:"h_client"`
 }
 
 type HttpClientParams struct {
@@ -48,10 +48,10 @@ type HttpClientParams struct {
 }
 
 type TFAParams struct {
-	Sms2Fa          bool   `json:"Sms2Fa"`
-	OTPUrl          string `json:"OTPUrl"`
-	OTPLifetime     int64  `json:"OTPLifetime"` //seconds
-	OTPConfirmLimit int64  `json:"OTPConfirmLimit"`
+	Sms2Fa          bool   `json:"sms_2fa" yaml:"sms_2fa"`
+	OTPUrl          string `json:"otp_url" yaml:"otp_url"`
+	OTPLifetime     int64  `json:"otp_lifetime" yaml:"otp_lifetime"` //seconds
+	OTPConfirmLimit int64  `json:"otp_confirm_limit" yaml:"otp_confirm_limit"`
 }
 
 type LoginRequest struct {
