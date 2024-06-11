@@ -122,7 +122,12 @@ func (s *Srv) checkUserInDb(accessToken string) (*pkg.User, error) {
 	}
 	user, find, err := s.repo.GetUserByKcId(*userInfo.Sub)
 	if !find {
-		user := &pkg.User{KcId: *userInfo.Sub, Username: *userInfo.PreferredUsername, Disabled: true}
+		user := &pkg.User{KcId: *userInfo.Sub,
+			Username: *userInfo.PreferredUsername,
+			Disabled: true,
+			FullName: *userInfo.Name,
+			Email:    *userInfo.Email,
+		}
 		return user, s.repo.CreateUserWithBaseRole(user)
 	}
 	return user, err
