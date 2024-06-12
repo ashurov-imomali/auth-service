@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"github.com/rs/zerolog"
-	"io"
 	"os"
 )
 
@@ -17,12 +16,7 @@ type Log interface {
 }
 
 func GetLogger() (Log, error) {
-	file, err := os.OpenFile("./logs/auth-service.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	if err != nil {
-		return nil, err
-	}
-	multiWriter := io.MultiWriter(os.Stdout, file)
-	logger := zerolog.New(multiWriter).With().Timestamp().CallerWithSkipFrameCount(3).Logger()
+	logger := zerolog.New(os.Stdout).With().Timestamp().CallerWithSkipFrameCount(3).Logger()
 	return &Logger{Log: &logger}, nil
 }
 
