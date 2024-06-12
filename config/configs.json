@@ -28,10 +28,10 @@
   },
 
   "2fa_params": {
-  "Sms2Fa": true,
-  "OTPUrl": "http://192.168.150.64:8339/otp",
-  "OTPLifetime": 120,
-  "OTPConfirmLimit": 3
+  "sms_2fa": true,
+  "otp_url": "http://192.168.150.64:8339/otp",
+  "otp_lifetime": 120,
+  "otp_confirm_limit": 3
   },
   "h_client": {
     "timeout": 20

@@ -1,7 +1,7 @@
 package pkg
 
 import (
-	"encoding/json"
+	"gopkg.in/yaml.v3"
 	"os"
 )
 
@@ -9,11 +9,11 @@ var Params = &TFAParams{}
 
 func GetConfigs() (*Config, error) {
 	var conf Config
-	bytes, err := os.ReadFile("./config/configs.json")
+	bytes, err := os.ReadFile("./config/configs.yaml")
 	if err != nil {
 		return nil, err
 	}
-	if err := json.Unmarshal(bytes, &conf); err != nil {
+	if err := yaml.Unmarshal(bytes, &conf); err != nil {
 		return nil, err
 	}
 	Params = conf.TFAParams

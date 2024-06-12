@@ -15,9 +15,9 @@ type Repository interface {
 }
 
 type Service interface {
-	Login(data *pkg.LoginRequest) (*pkg.LoginResponse, error)
-	Auth(accessToken string) (*pkg.UserInfo, error)
-	RefreshToken(refreshToken string) (*pkg.Tokens, error)
+	Login(data *pkg.LoginRequest) (*pkg.LoginResponse, *Error)
+	Auth(accessToken string) (*pkg.UserInfo, *Error)
+	RefreshToken(refreshToken string) (*pkg.Tokens, *Error)
 	SendOTP(request *pkg.OtpRequest) (*pkg.OtpRequest, *Error)
 	SetupGauth(userId int64, username string) (string, *Error)
 	ConfirmOtp(otp *pkg.Confirm) (*pkg.ConfirmResp, *Error)
