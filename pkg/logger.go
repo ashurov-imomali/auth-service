@@ -22,7 +22,7 @@ func GetLogger() (Log, error) {
 		return nil, err
 	}
 	multiWriter := io.MultiWriter(os.Stdout, file)
-	logger := zerolog.New(multiWriter).With().Timestamp().Caller().Logger()
+	logger := zerolog.New(multiWriter).With().Timestamp().CallerWithSkipFrameCount(3).Logger()
 	return &Logger{Log: &logger}, nil
 }
 
