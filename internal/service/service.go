@@ -42,47 +42,47 @@ func GetService(r Repository, l pkg.Log, conf *pkg.Config) Service {
 	}
 }
 
-func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, error) {
+func (s *Srv) Login(req *pkg.LoginRequest) (*pkg.LoginResponse, *Error) {
 	requestId := uuid.New().String()
 	token, err := s.kcLogin(req)
 	if err != nil {
-		return nil, err
+		return nil, keyCloakError(err)
 	}
 
 	tData, err := json.Marshal(&pkg.Tokens{AccessToken: token.AccessToken, RefreshToken: token.RefreshToken})
 	if err != nil {
-		return nil, err
+		return nil, internalServerError(err, "couldn't marshal")
 	}
 
 	if err := s.setRCache("token_"+requestId, tData, 8*time.Minute); err != nil {
-		return nil, err
+		return nil, internalServerError(err, "redis error")
 	}
 
 	user, err := s.checkUserInDb(token.AccessToken)
 	if err != nil {
-		return nil, err
+		return nil, keyCloakError(err)
 	}
 
 	uData, err := json.Marshal(&pkg.UserSecure{UserID: user.Id, GauthVerified: user.GauthVerified,
 		Gattribute: user.GauthSecret, Username: user.Username})
 	if err != nil {
-		return nil, err
+		return nil, internalServerError(err, "marshal error")
 	}
 
 	if err := s.setRCache("user_"+requestId, uData, 7*time.Minute); err != nil {
-		return nil, err
+		return nil, internalServerError(err, "redis error[set]")
 	}
 
 	var gAuthSession string
 	if pkg.Params.Sms2Fa {
 		gAuthSession = uuid.New().String()
 		if err := s.setRCache(gAuthSession, uData, 7*time.Minute); err != nil {
-			return nil, err
+			return nil, internalServerError(err, "redis error[set]")
 		}
 	}
 	permissions, err := s.repo.GetPermissionsByUserId(user.Id)
 	if err != nil {
-		return nil, err
+		return nil, internalServerError(err, "redis error[set]")
 	}
 
 	return &pkg.LoginResponse{
@@ -139,21 +139,25 @@ func (s *Srv) getKcUserInfo(accessToken string) (*gocloak.UserInfo, error) {
 		s.keycloak.realm)
 }
 
-func (s *Srv) Auth(accessToken string) (*pkg.UserInfo, error) {
-	result, err := s.verifyToken(s.extractBearerToken(accessToken))
+func (s *Srv) Auth(accessToken string) (*pkg.UserInfo, *Error) {
+	result, err := s.verifyToken(accessToken)
 	if err != nil {
-		return nil, err
+		return nil, keyCloakError(err)
 	}
 	if !*result.Active {
-		return nil, errors.New("invalid token")
+		return nil, unauthorized(errors.New("invalid token"), "invalid token")
 	}
 
 	_, claims, err := s.decodeAccessToken(accessToken)
 	if err != nil {
-		return nil, err
+		return nil, keyCloakError(err)
 	}
 
-	return s.repo.GetUserInfoByKcId((*claims)["sub"].(string))
+	user, err := s.repo.GetUserInfoByKcId((*claims)["sub"].(string))
+	if err != nil {
+		return nil, internalServerError(err, "database error")
+	}
+	return user, nil
 }
 
 func (s *Srv) decodeAccessToken(accessToken string) (*jwt.Token, *jwt.MapClaims, error) {
@@ -170,23 +174,10 @@ func (s *Srv) verifyToken(accessToken string) (*gocloak.IntroSpectTokenResult, e
 		s.keycloak.realm)
 }
 
-func (s *Srv) extractBearerToken(token string) string {
-	return strings.Replace(token, "Bearer ", "", 1)
-}
-
-//func (s *Srv) generateClaims(kcId string) {
-//	user, find, err := s.repo.GetUserByKcId(kcId)
-//	if err != nil {
-//
-//	}
-//	mp := make(map[string]interface{})
-//	mp[""]
-//}
-
-func (s *Srv) RefreshToken(refreshToken string) (*pkg.Tokens, error) {
-	token, err := s.refreshToken(s.extractBearerToken(refreshToken))
+func (s *Srv) RefreshToken(refreshToken string) (*pkg.Tokens, *Error) {
+	token, err := s.refreshToken(refreshToken)
 	if err != nil {
-		return nil, err
+		return nil, keyCloakError(err)
 	}
 	return &pkg.Tokens{AccessToken: token.AccessToken, RefreshToken: token.RefreshToken}, nil
 }

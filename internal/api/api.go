@@ -7,6 +7,7 @@ import (
 	"main/internal/service"
 	"main/pkg"
 	"net/http"
+	"strings"
 )
 
 type api struct {
@@ -45,10 +46,10 @@ func (a *api) login(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	response, err := a.srv.Login(&lData)
-	if err != nil {
-		a.log.Error(err, "couldn't login")
-		c.Status(http.StatusBadRequest)
+	response, hErr := a.srv.Login(&lData)
+	if hErr != nil {
+		a.log.Error(hErr.Err, hErr.Message)
+		c.JSON(hErr.Status, gin.H{"message": hErr.Message})
 		return
 	}
 	c.JSON(http.StatusOK, response)
@@ -56,10 +57,16 @@ func (a *api) login(c *gin.Context) {
 
 func (a *api) auth(c *gin.Context) {
 	accessToken := c.Request.Header.Get("Authorization")
-	user, err := a.srv.Auth(accessToken)
-	if err != nil {
-		a.log.Error(err, "couldn't auth")
-		c.Status(http.StatusUnauthorized)
+	accessToken = extractBearerToken(accessToken)
+	if accessToken == "" {
+		a.log.Info("missing token")
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "missing token"})
+		return
+	}
+	user, hErr := a.srv.Auth(accessToken)
+	if hErr != nil {
+		a.log.Error(hErr.Err, hErr.Message)
+		c.JSON(hErr.Status, gin.H{"message": hErr.Message})
 		return
 	}
 	c.JSON(http.StatusOK, user)
@@ -67,9 +74,15 @@ func (a *api) auth(c *gin.Context) {
 
 func (a *api) refreshToken(c *gin.Context) {
 	token := c.Request.Header.Get("Authorization")
-	response, err := a.srv.RefreshToken(token)
-	if err != nil {
-		a.log.Error(err, "couldn't get new tokens")
+	token = extractBearerToken(token)
+	if token == "" {
+		a.log.Info("missing token")
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "missing token"})
+		return
+	}
+	response, hErr := a.srv.RefreshToken(token)
+	if hErr != nil {
+		a.log.Error(hErr.Err, hErr.Message)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -144,10 +157,10 @@ func (a *api) verifyGauth(c *gin.Context) {
 func (a *api) checkToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Request.Header.Get("Authorization")
-		userInfo, err := a.srv.Auth(token)
-		if err != nil {
-			a.log.Error(err, "invalid token")
-			c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
+		userInfo, hErr := a.srv.Auth(token)
+		if hErr != nil {
+			a.log.Error(hErr.Err, hErr.Message)
+			c.JSON(hErr.Status, gin.H{"message": hErr.Message})
 			return
 		}
 		c.Set("user_id", userInfo.UserId)
@@ -177,4 +190,8 @@ func (a *api) getUserInfoFromContext(c *gin.Context) (*pkg.UserInfo, error) {
 		UserId:   id,
 		Username: name,
 	}, nil
+}
+
+func extractBearerToken(token string) string {
+	return strings.Replace(token, "Bearer ", "", 1)
 }
