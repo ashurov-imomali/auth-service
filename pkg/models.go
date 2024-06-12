@@ -60,7 +60,7 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	RequestID       string `json:"RequestID"`
+	RequestID       string `json:"requestID"`
 	Phone           string `json:"phone"`
 	IsGauthPrefered bool   `json:"isGauthPrefered"`
 	SmsOtpDisable   bool   `json:"sms_otp_disable"`
@@ -134,14 +134,14 @@ type SmsOTP struct {
 }
 
 type Confirm struct {
-	RequestID string
-	Value     string
-	Type      string //could be gauth or sms
+	RequestID string `json:"requestID"`
+	Value     string `json:"value"`
+	Type      string `json:"type"` //could be gauth or sms
 }
 
 type ConfirmResp struct {
-	AccessToken  string  `json:"access_token"`
+	AccessToken  string  `json:"token"`
 	RefreshToken string  `json:"refresh_token"`
-	UserId       string  `json:"user_id"`
+	UserId       string  `json:"userId"`
 	Permissions  []int64 `json:"permissions"`
 }
