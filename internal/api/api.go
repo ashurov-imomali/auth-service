@@ -43,7 +43,7 @@ func (a *api) login(c *gin.Context) {
 	var lData pkg.LoginRequest
 	if err := c.ShouldBindJSON(&lData); err != nil {
 		a.log.Error(err, "couldn't parse 2 struct")
-		c.Status(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"message": "couldn't parse 2 struct"})
 		return
 	}
 	response, hErr := a.srv.Login(&lData)
@@ -83,7 +83,7 @@ func (a *api) refreshToken(c *gin.Context) {
 	response, hErr := a.srv.RefreshToken(token)
 	if hErr != nil {
 		a.log.Error(hErr.Err, hErr.Message)
-		c.Status(http.StatusBadRequest)
+		c.JSON(hErr.Status, gin.H{"message": hErr.Message})
 		return
 	}
 	c.JSON(http.StatusOK, response)
