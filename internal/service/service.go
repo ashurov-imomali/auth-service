@@ -15,6 +15,7 @@ import (
 	"io"
 	"main/pkg"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -125,8 +126,8 @@ func (s *Srv) checkUserInDb(accessToken string) (*pkg.User, error) {
 		user := &pkg.User{KcId: *userInfo.Sub,
 			Username: *userInfo.PreferredUsername,
 			Disabled: true,
-			FullName: *userInfo.Name,
-			Email:    *userInfo.Email,
+			FullName: checkValue(userInfo.Name, "").(string),
+			Email:    checkValue(userInfo.Email, "").(string),
 		}
 		return user, s.repo.CreateUserWithBaseRole(user)
 	}
@@ -364,4 +365,12 @@ func (s *Srv) VerifyGauth(otp string, userId int64) *Error {
 		return internalServerError(err, "Database error[UpdateUSER]")
 	}
 	return nil
+}
+
+func checkValue(v interface{}, zeroVal interface{}) interface{} {
+	val := reflect.ValueOf(v)
+	if val.Kind() == reflect.Ptr && !val.IsNil() {
+		return val.Elem().Interface()
+	}
+	return zeroVal
 }
